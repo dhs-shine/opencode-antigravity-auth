@@ -808,7 +808,18 @@ export const createAntigravityPlugin = (providerId: string) => async (
                 break;
               }
 
-              const addAnother = await promptAddAnotherAccount(accounts.length);
+              // Get the actual deduplicated account count from storage for the prompt
+              let currentAccountCount = accounts.length;
+              try {
+                const currentStorage = await loadAccounts();
+                if (currentStorage) {
+                  currentAccountCount = currentStorage.accounts.length;
+                }
+              } catch {
+                // Fall back to accounts.length if we can't read storage
+              }
+
+              const addAnother = await promptAddAnotherAccount(currentAccountCount);
               if (!addAnother) {
                 break;
               }
@@ -824,9 +835,20 @@ export const createAntigravityPlugin = (providerId: string) => async (
               };
             }
 
+            // Get the actual deduplicated account count from storage
+            let actualAccountCount = accounts.length;
+            try {
+              const finalStorage = await loadAccounts();
+              if (finalStorage) {
+                actualAccountCount = finalStorage.accounts.length;
+              }
+            } catch {
+              // Fall back to accounts.length if we can't read storage
+            }
+
             return {
               url: "",
-              instructions: `Multi-account setup complete (${accounts.length} account(s)).`,
+              instructions: `Multi-account setup complete (${actualAccountCount} account(s)).`,
               method: "auto",
               callback: async (): Promise<AntigravityTokenExchangeResult> => primary,
             };
