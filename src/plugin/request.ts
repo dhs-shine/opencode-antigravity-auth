@@ -349,7 +349,7 @@ function hasSignedThinkingPart(part: any): boolean {
   return false;
 }
 
-function ensureThinkingBeforeToolUseInContents(contents: any[], sessionId: string): any[] {
+function ensureThinkingBeforeToolUseInContents(contents: any[], signatureSessionKey: string): any[] {
   return contents.map((content: any) => {
     if (!content || typeof content !== "object" || !Array.isArray(content.parts)) {
       return content;
@@ -366,7 +366,7 @@ function ensureThinkingBeforeToolUseInContents(contents: any[], sessionId: strin
       return content;
     }
 
-    const thinkingParts = parts.filter(isGeminiThinkingPart).map((p) => ensureThoughtSignature(p, sessionId));
+    const thinkingParts = parts.filter(isGeminiThinkingPart).map((p) => ensureThoughtSignature(p, signatureSessionKey));
     const otherParts = parts.filter((p) => !isGeminiThinkingPart(p));
     const hasSignedThinking = thinkingParts.some(hasSignedThinkingPart);
 
@@ -374,7 +374,7 @@ function ensureThinkingBeforeToolUseInContents(contents: any[], sessionId: strin
       return { ...content, parts: [...thinkingParts, ...otherParts] };
     }
 
-    const lastThinking = lastSignedThinkingBySessionKey.get(sessionId);
+    const lastThinking = lastSignedThinkingBySessionKey.get(signatureSessionKey);
     if (!lastThinking) {
       return content;
     }
@@ -460,7 +460,7 @@ function hasSignedThinkingInMessages(messages: any[]): boolean {
   });
 }
 
-function ensureThinkingBeforeToolUseInMessages(messages: any[], sessionId: string): any[] {
+function ensureThinkingBeforeToolUseInMessages(messages: any[], signatureSessionKey: string): any[] {
   return messages.map((message: any) => {
     if (!message || typeof message !== "object" || !Array.isArray(message.content)) {
       return message;
@@ -478,7 +478,7 @@ function ensureThinkingBeforeToolUseInMessages(messages: any[], sessionId: strin
 
     const thinkingBlocks = blocks
       .filter((b) => b && typeof b === "object" && (b.type === "thinking" || b.type === "redacted_thinking"))
-      .map((b) => ensureMessageThinkingSignature(b, sessionId));
+      .map((b) => ensureMessageThinkingSignature(b, signatureSessionKey));
 
     const otherBlocks = blocks.filter((b) => !(b && typeof b === "object" && (b.type === "thinking" || b.type === "redacted_thinking")));
     const hasSignedThinking = thinkingBlocks.some((b) => typeof b.signature === "string" && b.signature.length >= MIN_SIGNATURE_LENGTH);
@@ -487,7 +487,7 @@ function ensureThinkingBeforeToolUseInMessages(messages: any[], sessionId: strin
       return { ...message, content: [...thinkingBlocks, ...otherBlocks] };
     }
 
-    const lastThinking = lastSignedThinkingBySessionKey.get(sessionId);
+    const lastThinking = lastSignedThinkingBySessionKey.get(signatureSessionKey);
     if (!lastThinking) {
       return message;
     }
