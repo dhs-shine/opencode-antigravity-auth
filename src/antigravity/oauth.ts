@@ -10,6 +10,7 @@ import {
   ANTIGRAVITY_HEADERS,
 } from "../constants";
 import { createLogger } from "../plugin/logger";
+import { calculateTokenExpiry } from "../plugin/auth";
 
 const log = createLogger("oauth");
 
@@ -111,9 +112,24 @@ export async function authorizeAntigravity(projectId = ""): Promise<AntigravityA
   };
 }
 
+const FETCH_TIMEOUT_MS = 10000;
+
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs = FETCH_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function fetchProjectID(accessToken: string): Promise<string> {
   const errors: string[] = [];
-  // Use CLIProxy-aligned headers for project discovery to match "real" Antigravity clients.
   const loadHeaders: Record<string, string> = {
     Authorization: `Bearer ${accessToken}`,
     "Content-Type": "application/json",
@@ -129,7 +145,7 @@ async function fetchProjectID(accessToken: string): Promise<string> {
   for (const baseEndpoint of loadEndpoints) {
     try {
       const url = `${baseEndpoint}/v1internal:loadCodeAssist`;
-      const response = await fetch(url, {
+      const response = await fetchWithTimeout(url, {
         method: "POST",
         headers: loadHeaders,
         body: JSON.stringify({
@@ -189,6 +205,7 @@ export async function exchangeAntigravity(
   try {
     const { verifier, projectId } = decodeState(state);
 
+    const startTime = Date.now();
     const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: {
@@ -240,7 +257,7 @@ export async function exchangeAntigravity(
       type: "success",
       refresh: storedRefresh,
       access: tokenPayload.access_token,
-      expires: Date.now() + tokenPayload.expires_in * 1000,
+      expires: calculateTokenExpiry(startTime, tokenPayload.expires_in),
       email: userInfo.email,
       projectId: effectiveProjectId || "",
     };

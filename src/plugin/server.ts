@@ -212,12 +212,20 @@ const successResponse = `<!DOCTYPE html>
   });
 
   await new Promise<void>((resolve, reject) => {
-    const handleError = (error: Error) => {
+    const handleError = (error: NodeJS.ErrnoException) => {
       server.off("error", handleError);
+      if (error.code === "EADDRINUSE") {
+        reject(new Error(
+          `Port ${port} is already in use. ` +
+          `Another process is occupying this port. ` +
+          `Please terminate the process or try again later.`
+        ));
+        return;
+      }
       reject(error);
     };
     server.once("error", handleError);
-    server.listen(port, "127.0.0.1", () => {
+    server.listen(port, () => {
       server.off("error", handleError);
       resolve();
     });
