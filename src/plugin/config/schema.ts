@@ -253,9 +253,17 @@ export const AntigravityConfigSchema = z.object({
    * @default false
    */
   pid_offset_enabled: z.boolean().default(false),
-  
-  // =========================================================================
-  // Auto-Update
+   
+   /**
+    * Switch to another account immediately on first rate limit (after 1s delay).
+    * When disabled, retries same account first, then switches on second rate limit.
+    * 
+    * @default true
+    */
+   switch_on_first_rate_limit: z.boolean().default(true),
+   
+   // =========================================================================
+   // Auto-Update
   // =========================================================================
   
   /**
@@ -288,8 +296,9 @@ export const DEFAULT_CONFIG: AntigravityConfig = {
   max_rate_limit_wait_seconds: 300,
   quota_fallback: false,
   account_selection_strategy: 'sticky',
-  pid_offset_enabled: false,
-  auto_update: true,
+pid_offset_enabled: false,
+   switch_on_first_rate_limit: true,
+   auto_update: true,
   signature_cache: {
     enabled: true,
     memory_ttl_seconds: 3600,

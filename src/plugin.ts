@@ -491,7 +491,9 @@ function formatWaitTime(ms: number): string {
   return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 }
 
-const SHORT_RETRY_THRESHOLD_MS = 5000;
+// Progressive rate limit retry delays
+const FIRST_RETRY_DELAY_MS = 1000;      // 1s - first 429 quick retry on same account
+const SWITCH_ACCOUNT_DELAY_MS = 5000;   // 5s - delay before switching to another account
 
 /**
  * Rate limit state tracking with time-window deduplication.
@@ -1256,13 +1258,18 @@ export const createAntigravityPlugin = (providerId: string) => async (
                   
                   const accountLabel = account.email || `Account ${account.index + 1}`;
 
-                  // Short retry: if delay is small, just wait and retry same account
-                  if (delayMs <= SHORT_RETRY_THRESHOLD_MS) {
-                    await showToast(`Rate limited. Retrying in ${waitTimeFormatted} (attempt ${attempt})...`, "warning");
-                    await sleep(delayMs, abortSignal);
+                  // Progressive retry: 1st 429 → 1s then switch (if enabled) or retry same
+                  if (attempt === 1) {
+                    await showToast(`Rate limited. Quick retry in 1s...`, "warning");
+                    await sleep(FIRST_RETRY_DELAY_MS, abortSignal);
+                    
+                    if (config.switch_on_first_rate_limit && accountCount > 1) {
+                      accountManager.markRateLimited(account, delayMs, family, headerStyle, model);
+                      shouldSwitchAccount = true;
+                      break;
+                    }
                     continue;
                   }
-
 
                   // Mark this header style as rate-limited for this account
                   accountManager.markRateLimited(account, delayMs, family, headerStyle, model);
@@ -1279,6 +1286,8 @@ export const createAntigravityPlugin = (providerId: string) => async (
                       // Check if any other account has Antigravity quota for this model
                       if (hasOtherAccountWithAntigravity(account)) {
                         pushDebug(`antigravity exhausted on account ${account.index}, but available on others. Switching account.`);
+                        await showToast(`Rate limited again. Switching account in 5s...`, "warning");
+                        await sleep(SWITCH_ACCOUNT_DELAY_MS, abortSignal);
                         shouldSwitchAccount = true;
                         break;
                       }
@@ -1290,12 +1299,12 @@ export const createAntigravityPlugin = (providerId: string) => async (
                         if (alternateStyle && alternateStyle !== headerStyle) {
                           const safeModelName = model || "this model";
                           await showToast(
-                            `Antigravity quota exhausted for ${safeModelName}. Switching to Gemini CLI quota... Tip: Other Gemini models may still have quota.`,
+                            `Antigravity quota exhausted for ${safeModelName}. Switching to Gemini CLI quota...`,
                             "warning"
                           );
                           headerStyle = alternateStyle;
                           pushDebug(`quota fallback: ${headerStyle}`);
-                          continue; // Retry with new headerStyle
+                          continue;
                         }
                       }
                     }
@@ -1306,8 +1315,9 @@ export const createAntigravityPlugin = (providerId: string) => async (
                   if (accountCount > 1) {
                     const quotaMsg = bodyInfo.quotaResetTime 
                       ? ` (quota resets ${bodyInfo.quotaResetTime})`
-                      : ` (retry in ${waitTimeFormatted})`;
-                    await showToast(`Rate limited on ${quotaName} quota for ${accountLabel}${quotaMsg}. Switching account...`, "warning");
+                      : ``;
+                    await showToast(`Rate limited again. Switching account in 5s...${quotaMsg}`, "warning");
+                    await sleep(SWITCH_ACCOUNT_DELAY_MS, abortSignal);
                     
                     lastFailure = {
                       response,
@@ -1325,10 +1335,10 @@ export const createAntigravityPlugin = (providerId: string) => async (
                     shouldSwitchAccount = true;
                     break;
                   } else {
-                    const quotaMsg = bodyInfo.quotaResetTime 
-                      ? `Quota resets ${bodyInfo.quotaResetTime}`
-                      : `Waiting ${waitTimeFormatted}`;
-                    await showToast(`Rate limited. ${quotaMsg} (attempt ${attempt})...`, "warning");
+                    // Single account: exponential backoff (1s, 2s, 4s, 8s... max 60s)
+                    const expBackoffMs = Math.min(FIRST_RETRY_DELAY_MS * Math.pow(2, attempt - 1), 60000);
+                    const expBackoffFormatted = expBackoffMs >= 1000 ? `${Math.round(expBackoffMs / 1000)}s` : `${expBackoffMs}ms`;
+                    await showToast(`Rate limited. Retrying in ${expBackoffFormatted} (attempt ${attempt})...`, "warning");
                     
                     lastFailure = {
                       response,
@@ -1344,7 +1354,7 @@ export const createAntigravityPlugin = (providerId: string) => async (
                       toolDebugPayload: prepared.toolDebugPayload,
                     };
                     
-                    await sleep(delayMs, abortSignal);
+                    await sleep(expBackoffMs, abortSignal);
                     shouldSwitchAccount = true;
                     break;
                   }

@@ -445,6 +445,7 @@ Create `~/.config/opencode/antigravity.json` (or `.opencode/antigravity.json` in
 | `proactive_refresh_buffer_seconds` | `1800` | Refresh 30min before expiry |
 | `max_rate_limit_wait_seconds` | `300` | Max wait time when rate limited (0=unlimited) |
 | `quota_fallback` | `false` | Try alternate quota when rate limited |
+| `switch_on_first_rate_limit` | `true` | Switch account immediately on first 429 (after 1s) |
 
 ### Account Selection
 
