@@ -419,6 +419,7 @@ Create `~/.config/opencode/antigravity.json` (or `.opencode/antigravity.json` in
 | `debug` | `false` | Enable debug logging to file |
 | `log_dir` | OS default | Custom directory for debug logs |
 | `auto_update` | `true` | Enable automatic plugin updates |
+| `keep_thinking` | `false` | ⚠️ **Experimental.** Preserve Claude's thinking blocks via signature caching. Required for conversation continuity when using thinking models. See [Signature Cache](#signature-cache) for cache settings. |
 
 ### Session Recovery
 
@@ -437,6 +438,19 @@ Create `~/.config/opencode/antigravity.json` (or `.opencode/antigravity.json` in
 | `tool_id_recovery` | `true` | Fix mismatched tool IDs from context compaction |
 | `claude_tool_hardening` | `true` | Prevent tool parameter hallucination |
 
+### Signature Cache
+
+> ⚠️ **Experimental Feature** - Signature caching is experimental and may have edge cases. Please report issues.
+
+When `keep_thinking` is enabled, the plugin caches thinking block signatures to preserve conversation continuity across requests.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `signature_cache.enabled` | `true` | Enable disk caching of thinking block signatures |
+| `signature_cache.memory_ttl_seconds` | `3600` | In-memory cache TTL (1 hour) |
+| `signature_cache.disk_ttl_seconds` | `172800` | Disk cache TTL (48 hours) |
+| `signature_cache.write_interval_seconds` | `60` | Background write interval |
+
 ### Token Management
 
 | Option | Default | Description |
@@ -444,7 +458,7 @@ Create `~/.config/opencode/antigravity.json` (or `.opencode/antigravity.json` in
 | `proactive_token_refresh` | `true` | Refresh tokens before expiry |
 | `proactive_refresh_buffer_seconds` | `1800` | Refresh 30min before expiry |
 | `max_rate_limit_wait_seconds` | `300` | Max wait time when rate limited (0=unlimited) |
-| `quota_fallback` | `false` | Try alternate quota when rate limited |
+| `quota_fallback` | `false` | **Gemini only.** When rate-limited on primary quota pool (Antigravity or Gemini CLI), automatically try the alternate pool before switching accounts. Effectively doubles retry attempts per account. See [Dual Quota Pools](#dual-quota-pools-gemini-only). |
 | `switch_on_first_rate_limit` | `true` | Switch account immediately on first 429 (after 1s) |
 
 ### Account Selection

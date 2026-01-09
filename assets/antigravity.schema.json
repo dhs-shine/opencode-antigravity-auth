@@ -26,7 +26,7 @@
     "keep_thinking": {
       "type": "boolean",
       "default": false,
-      "description": "Preserve thinking blocks for Claude models using signature caching. Env override: OPENCODE_ANTIGRAVITY_KEEP_THINKING=1"
+      "description": "[EXPERIMENTAL] Preserve thinking blocks for Claude models using signature caching. Env override: OPENCODE_ANTIGRAVITY_KEEP_THINKING=1"
     },
     "session_recovery": {
       "type": "boolean",
@@ -58,7 +58,7 @@
     "quota_fallback": {
       "type": "boolean",
       "default": false,
-      "description": "Enable fallback to alternate quota when primary quota is rate limited."
+      "description": "Gemini only. When rate-limited on primary quota pool (Antigravity or Gemini CLI), automatically try the alternate pool before switching accounts. Effectively doubles retry attempts per account."
     },
     "account_selection_strategy": {
       "type": "string",
@@ -141,6 +141,16 @@
       "maximum": 1800,
       "default": 300,
       "description": "Interval between proactive refresh checks in seconds."
+    },
+    "switch_on_first_rate_limit": {
+      "type": "boolean",
+      "default": true,
+      "description": "Switch to next account immediately on first 429 rate limit (after 1s delay). When disabled, waits for full retry-after duration before switching."
+    },
+    "pid_offset_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Use process ID to offset initial account selection. Helps distribute load when running multiple OpenCode sessions in parallel (e.g., with subagents)."
     }
   }
 }
