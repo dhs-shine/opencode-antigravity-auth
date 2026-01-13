@@ -237,7 +237,7 @@ export const AntigravityConfigSchema = z.object({
   /**
    * Strategy for selecting accounts when making requests.
    * Env override: OPENCODE_ANTIGRAVITY_ACCOUNT_SELECTION_STRATEGY
-   * @default "sticky"
+   * @default "hybrid"
    */
   account_selection_strategy: AccountSelectionStrategySchema.default('hybrid'),
   
