@@ -809,13 +809,13 @@ export function extractVariantThinkingConfig(
   const result: VariantThinkingConfig = {};
 
   // Gemini 3 native format: { google: { thinkingLevel: "high", includeThoughts: true } }
+  // thinkingLevel takes priority over thinkingBudget - they are mutually exclusive
   if (typeof google.thinkingLevel === "string") {
     result.thinkingLevel = google.thinkingLevel;
     result.includeThoughts = typeof google.includeThoughts === "boolean" ? google.includeThoughts : undefined;
-  }
-
-  // Budget-based format (Claude/Gemini 2.5): { google: { thinkingConfig: { thinkingBudget } } }
-  if (google.thinkingConfig && typeof google.thinkingConfig === "object") {
+  } else if (google.thinkingConfig && typeof google.thinkingConfig === "object") {
+    // Budget-based format (Claude/Gemini 2.5): { google: { thinkingConfig: { thinkingBudget } } }
+    // Only used when thinkingLevel is not present
     const tc = google.thinkingConfig as Record<string, unknown>;
     if (typeof tc.thinkingBudget === "number") {
       result.thinkingBudget = tc.thinkingBudget;
