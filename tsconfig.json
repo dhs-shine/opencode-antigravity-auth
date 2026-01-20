@@ -1,5 +1,4 @@
 {
-  "exclude": ["opencode-better-antigravity-auth", "CLIProxyAPI"],
   "compilerOptions": {
     // Environment setup & latest features
     "lib": ["ESNext", "DOM"],
