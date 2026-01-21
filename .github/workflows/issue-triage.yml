@@ -143,7 +143,7 @@ jobs:
             }
             
             let labelsToAdd = [];
-            const labelsToRemove = ['needs-triage'];
+            let labelsToRemove = ['needs-triage'];
             
             // Remove existing triage labels to prevent conflicts
             validTypeLabels.forEach(label => labelsToRemove.push(label));
