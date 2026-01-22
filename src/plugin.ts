@@ -1177,7 +1177,17 @@ export const createAntigravityPlugin = (providerId: string) => async (
             // Track if token was consumed (for hybrid strategy refund on error)
             let tokenConsumed = false;
             
+            // Track capacity retries per endpoint to prevent infinite loops
+            let capacityRetryCount = 0;
+            let lastEndpointIndex = -1;
+            
             for (let i = 0; i < ANTIGRAVITY_ENDPOINT_FALLBACKS.length; i++) {
+              // Reset capacity retry counter when switching to a new endpoint
+              if (i !== lastEndpointIndex) {
+                capacityRetryCount = 0;
+                lastEndpointIndex = i;
+              }
+
               const currentEndpoint = ANTIGRAVITY_ENDPOINT_FALLBACKS[i];
 
               try {
@@ -1261,10 +1271,20 @@ export const createAntigravityPlugin = (providerId: string) => async (
                      
                      await sleep(waitMs, abortSignal);
                      
+                     await sleep(waitMs, abortSignal);
+                     
                      // CRITICAL FIX: Decrement i so that the loop 'continue' retries the SAME endpoint index
                      // (i++ in the loop will bring it back to the current index)
-                     i -= 1;
-                     continue; 
+                     // But limit retries to prevent infinite loops (Greptile feedback)
+                     if (capacityRetryCount < 3) {
+                       capacityRetryCount++;
+                       i -= 1;
+                       continue; 
+                     } else {
+                       pushDebug(`Max capacity retries (3) exhausted for endpoint ${currentEndpoint}, trying next endpoint...`);
+                       // Do not decrement i, loop will advance to next endpoint
+                       continue;
+                     }
                   }
 
                   // STRATEGY 2: RATE LIMIT EXCEEDED (RPM) / QUOTA EXHAUSTED / UNKNOWN
