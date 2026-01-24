@@ -1076,8 +1076,11 @@ export const createAntigravityPlugin = (providerId: string) => async (
             // Show toast when switching to a different account (debounced, quiet_mode handled by showToast)
             if (accountCount > 1 && accountManager.shouldShowAccountToast(account.index)) {
               const accountLabel = account.email || `Account ${account.index + 1}`;
+              // Calculate position among enabled accounts (not absolute index)
+              const enabledAccounts = accountManager.getEnabledAccounts();
+              const enabledPosition = enabledAccounts.findIndex(a => a.index === account.index) + 1;
               await showToast(
-                `Using ${accountLabel} (${account.index + 1}/${accountCount})`,
+                `Using ${accountLabel} (${enabledPosition}/${accountCount})`,
                 "info"
               );
               accountManager.markToastShown(account.index);
